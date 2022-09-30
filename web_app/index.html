@@ -24,6 +24,12 @@
       var sq_1 = new Panel();
       var ed_1 = new EventsDispatcher(sq_1);
 
+      // Get a default chromatic scale
+      scale = new Scale();
+
+      // Define the midi sender through websocket integration
+      midi = new Midi();
+
       // Definition of colors
       var on_red = new Color(220, 20, 60);
 
@@ -31,19 +37,24 @@
       var controls = new Group({panel:sq_1, x:20, y:30, width:200, height:250, caption:"CONTROLS"});
       var seq_a = new Group({panel:sq_1, x:230, y:30, width:640, height:110, caption:"SEQUENCER A"});
       var seq_b = new Group({panel:sq_1, x:230, y:170, width:640, height:110, caption:"SEQUENCER B"});
+      var scale_group = new Group({panel:sq_1, x:880, y:30, width:200, height:250, caption:"SCALES"});
 
-      // Get a default chromatic scale
-      scale = new Scale({scale:4, shift:1});
-
-      // Define the midi sender through websocket integration
-      midi = new Midi();
+      // Scale controls
+      var changeScale = function(val){
+        scale.setScale(val);
+      }
+      var sel_scale = new Selector({panel:sq_1, group:scale_group, eventsDispatcher:ed_1, callback:changeScale, x:20, y:10, size:160, array:["CHROMATIC", "MAJOR", "MELODIC MINOR", "HARMONIC MINOR", "AEOLIAN"], index:0, onColor:on_red, caption:"SCALE"});
+      var changeShift = function(val){
+        scale.setShift(val);
+      }
+      var sel_shift = new Selector({panel:sq_1, group:scale_group, eventsDispatcher:ed_1, callback:changeShift, x:140, y:180, size:50, array:["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"], index:0, onColor:on_red, caption:"SHIFT"});
 
       // Sequencer controls
       var sel_mode = 0;
       var selectorChange = function(val){
         sel_mode = val;
       }
-      var sel_1 = new Selector({panel:sq_1, group:controls, eventsDispatcher:ed_1, callback:selectorChange, x:65, y:70, size:70, min:-100, max:100, array:["SEQ", "HOP", "RND"], index:0, onColor:on_red, caption:"SEQUENCER"});
+      var sel_sequencer = new Selector({panel:sq_1, group:controls, eventsDispatcher:ed_1, callback:selectorChange, x:65, y:70, size:70, array:["SEQ", "HOP", "RND"], index:0, onColor:on_red, caption:"SEQUENCER"});
       var mode_leds = [];
       mode_leds.push(new Led({panel:sq_1, group:controls, eventsDispatcher:ed_1, x:10, y:10, val:1, onColor:on_red, caption:"GATE ON/OFF"}));
       mode_leds.push(new Led({panel:sq_1, group:controls, eventsDispatcher:ed_1, x:10, y:35, onColor:on_red, caption:"ACTIVE STEP"}));

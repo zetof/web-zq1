@@ -1,8 +1,8 @@
-function Scale({base=36, scale, shift, steps}){
+function Scale(base=36, scale=0, shift=0, steps=50){
   this.base = base || 36;
   this.scale = scale || 0;
   this.shift = shift || 0;
-  this.steps = steps || 51;
+  this.steps = steps + 1 || 51;
   this.scales = [
     ["CHROMATIC", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]],
     ["MAJOR", [0, 2, 4, 5, 7, 9, 11]],
@@ -13,8 +13,14 @@ function Scale({base=36, scale, shift, steps}){
   this.setNotes();
 }
 
-Scale.prototype.setScale = function(type){
-  this.type = type;
+Scale.prototype.setScale = function(scale){
+  this.scale = scale;
+  this.setNotes();
+}
+
+Scale.prototype.setShift = function(shift){
+  this.shift = shift;
+  this.setNotes();
 }
 
 Scale.prototype.setNotes = function(){

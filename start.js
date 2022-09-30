@@ -13,6 +13,7 @@ const __dirname = dirname(__filename);
 const web_app_port = 3000;
 const ws_server_ip = "127.0.0.1";
 const ws_server_port = 3061;
+const midi_device_name = "ZQ-1";
 const app = express();
 
 // Define a base address for the starting page of the appplication
@@ -24,11 +25,11 @@ app.get("/", (req, res) => {
 app.use(express.static("web_app"));
 
 // Start web server for frontend application
-app.listen(web_app_port, () => console.log(`Your mobi controller is available  on port ${web_app_port}`));
+app.listen(web_app_port, () => console.log(`Your sequencer controller is available on port ${web_app_port}`));
 
 // Starts a virtual MIDI device
 var outputs = easymidi.getOutputs();
-var output = new easymidi.Output('ZQ-1', true);
+var output = new easymidi.Output(midi_device_name, true);
 
 // Start a websocket server and listen to incoming messages
 const wss = new WebSocketServer({ port: ws_server_port });
@@ -41,5 +42,5 @@ wss.on("connection", function connection(ws) {
       channel: parse.args[3].value
     });
   });
-  ws.send("Connected to mobi backend");
+  ws.send("Connected to sequencer backend");
 });
