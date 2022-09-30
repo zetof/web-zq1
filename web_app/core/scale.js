@@ -10,7 +10,9 @@ function Scale(base=36, scale=0, shift=0, steps=50){
     ["HARMONIC MINOR", [0, 2, 3, 5, 7, 8, 11]],
     ["MAJOR PENTATONIC", [0, 2, 4, 7, 9]],
     ["MINOR PENTATONIC", [0, 3, 5, 7, 10]],
-    ["AEOLIAN", [0, 2, 3, 5, 7, 8, 10]]
+    ["AEOLIAN", [0, 2, 3, 5, 7, 8, 10]],
+    ["SPANISH", [0, 1, 4, 5, 7, 8, 10]],
+    ["CHINESE", [0, 4, 6, 7, 11]]
   ];
   this.setNotes();
 }
@@ -41,9 +43,15 @@ Scale.prototype.setNotes = function(){
       }
     }
   }
-  console.log(this.notes);
 }
 
 Scale.prototype.getNote = function(index){
   return this.notes[index];
+}
+
+Scale.prototype.getScaleNames = function(index){
+  let scale_names = [];
+  this.scales.forEach(element => scale_names.push(element[0]));
+  return scale_names;
+
 }
