@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="core/main.css">
+    <script type="text/javascript" src="core/panel.js"></script>
+    <script type="text/javascript" src="core/boundaries.js"></script>
+    <script type="text/javascript" src="core/event.js"></script>
+    <script type="text/javascript" src="core/events_dispatcher.js"></script>
+    <script type="text/javascript" src="core/midi.js"></script>
+    <script type="text/javascript" src="core/scale.js"></script>
+    <script type="text/javascript" src="core/color.js"></script>
+    <script type="text/javascript" src="core/group.js"></script>
+    <script type="text/javascript" src="core/switch.js"></script>
+    <script type="text/javascript" src="core/selector.js"></script>
+    <script type="text/javascript" src="core/pad.js"></script>
+    <script type="text/javascript" src="core/knob.js"></script>
+    <script type="text/javascript" src="core/led.js"></script>
+  </head>
+  <body>
+    <script>
+
+      // Create main panel and general event dispatcher
+      var sq_1 = new Panel();
+      var ed_1 = new EventsDispatcher(sq_1);
+
+      // Definition of colors
+      var on_red = new Color(220, 20, 60);
+
+      // Definition of groups
+      var controls = new Group({panel:sq_1, x:20, y:30, width:200, height:250, caption:"CONTROLS"});
+      var seq_a = new Group({panel:sq_1, x:230, y:30, width:640, height:110, caption:"SEQUENCER A"});
+      var seq_b = new Group({panel:sq_1, x:230, y:170, width:640, height:110, caption:"SEQUENCER B"});
+
+      // Get a default chromatic scale
+      scale = new Scale({scale:4, shift:1});
+
+      // Define the midi sender through websocket integration
+      midi = new Midi();
+
+      // Sequencer controls
+      var sel_mode = 0;
+      var selectorChange = function(val){
+        sel_mode = val;
+      }
+      var sel_1 = new Selector({panel:sq_1, group:controls, eventsDispatcher:ed_1, callback:selectorChange, x:65, y:70, size:70, min:-100, max:100, array:["SEQ", "HOP", "RND"], index:0, onColor:on_red, caption:"SEQUENCER"});
+      var mode_leds = [];
+      mode_leds.push(new Led({panel:sq_1, group:controls, eventsDispatcher:ed_1, x:10, y:10, val:1, onColor:on_red, caption:"GATE ON/OFF"}));
+      mode_leds.push(new Led({panel:sq_1, group:controls, eventsDispatcher:ed_1, x:10, y:35, onColor:on_red, caption:"ACTIVE STEP"}));
+      var seq_mode = 0;
+      var setSeqMode = function(val) {
+        if(val == 1){
+          mode_leds[seq_mode].off();
+          seq_mode = (seq_mode < 1)?seq_mode + 1:0;
+          mode_leds[seq_mode].on();          
+        }
+      }
+      var mode_pad = new Pad({panel:sq_1, group:controls, eventsDispatcher:ed_1, callback:setSeqMode, x:140, y:18, mode:1, onColor:on_red, caption:"STEP"});
+      var changeSpeed = function(val){
+        metronome_bpm = val;
+      }
+      var main_speed = new Knob({panel:sq_1, group:controls, eventsDispatcher:ed_1, callback:changeSpeed, x:15, y: 180, val:60, min:5, max:180, onColor:on_red, caption:"SPEED"});
+      var changeDuty = function(val){
+        duty = val;
+      }
+      var main_duty = new Knob({panel:sq_1, group:controls, eventsDispatcher:ed_1, callback:changeDuty, x:70, y:180, val:50, min:10, max:90, onColor:on_red, caption:"DUTY"});
+      var stopPlay = function(val){
+        metronome_running = val==0?false:true;
+        if(metronome_running) setTimeout(metronome, 15000 / metronome_bpm);
+        else{
+          if(sel_mode == 0 ) step = 0;
+          else if(steps.length > 0) step = steps[0];
+        }
+      }
+      var main_stop_play = new Pad({panel:sq_1, group:controls, eventsDispatcher:ed_1, callback:stopPlay, x:125, y:170, width:60, height:60, onColor:on_red, caption:"PLAY/STOP"});
+      var duty = main_duty.getVal();
+      var metronome_bpm = main_speed.getVal();
+      var metrononme_running = main_stop_play.getVal();
+      
+      // Sequencer A+B controls */
+      var seq_knobs = [];
+      var seq_pads = [];
+      var steps = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+      var active_steps = 16;
+      var changeSteps = function(val){
+        if(val == 0){
+          steps.splice(steps.indexOf(this.index), 1);
+        }
+        else{
+          steps.push(this.index);
+        }
+        active_steps = steps.length;
+      }
+      for(i = 0; i < 8; i++){
+        seq_knobs.push(new Knob({panel:sq_1, group:seq_a, eventsDispatcher:ed_1, x:20 + 80 * i, y:15, min:0, max:50, val:25, onColor:on_red}));
+        seq_pads.push(new Pad({panel:sq_1, group:seq_a, eventsDispatcher:ed_1, callback:changeSteps.bind({"index": i}), x:15 + 80 * i, y:70, val:1, onColor:on_red}));
+      }
+      for(i = 8; i < 16; i++){
+        seq_knobs.push(new Knob({panel:sq_1, group:seq_b, eventsDispatcher:ed_1, x:20 + 80 * (i - 8), y:15, min:0, max:50, val:25, onColor:on_red}));
+        seq_pads.push(new Pad({panel:sq_1, group:seq_b, eventsDispatcher:ed_1, callback:changeSteps.bind({"index": i}), x:15 + 80 * (i - 8), y:70, val:1, onColor:on_red}));
+      }
+
+      function sendNoteOn(note, velocity, channel=1){
+        midi.send(["noteon", note, velocity, channel]);
+      }
+
+      function sendNoteOff(note, velocity, channel=1){
+        midi.send(["noteoff", note, velocity, channel]);
+      }
+
+      var step = 0;
+      var metronome = function(){
+        if(metronome_running) {
+          if(seq_mode == 0 || active_steps > 0){
+            seq_knobs[step].blink();
+            if(seq_pads[step].getVal() == 1){
+              // Send midi message here
+              sendNoteOn(scale.getNote(seq_knobs[step].getVal()), 127);
+              setTimeout(sendNoteOff, duty * 150 / metronome_bpm, scale.getNote(seq_knobs[step].getVal()), 127);
+            }
+            switch(sel_mode){
+              case 0:
+                if(seq_mode == 0){
+                  step++;
+                  step = step>15?0:step;
+                }
+                else{
+                  let active = false;
+                  while(!active){
+                    step++;
+                    step = step>15?0:step;
+                    active = steps.includes(step);
+                  }
+                }
+                break;
+              case 1:
+                if(seq_mode == 0){
+                  step = step==15?-8:step;
+                  step = step<8?step+8:step-7;
+                }
+                else{
+                  let active = false;
+                  while(!active){
+                    step = step==15?-8:step;
+                    step = step<8?step+8:step-7;
+                    active = steps.includes(step);
+                  }
+                }
+                break;
+              case 2:
+                if(seq_mode == 0){
+                  step = Math.floor(Math.random() * 15);
+                }
+                else{
+                  step = steps[Math.floor(Math.random() * steps.length)];
+                }
+            }
+          }
+          setTimeout(metronome, 15000 / metronome_bpm);          
+        }
+      }
+    </script>
+  </body>
+</html>
